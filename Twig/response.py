@@ -10,7 +10,7 @@ def read(path:str):
 
 class Response:
 
-    def __init__(self, ContentType:ContentType = ContentType.html, Content:str = "", headers: Dict[str, str] = {}) -> None:
+    def __init__(self, Content:str = "", ContentType:ContentType = ContentType.html, headers: Dict[str, str] = {}) -> None:
         self.ContentType = ContentType
         self.Content = Content
         self.headers = headers
