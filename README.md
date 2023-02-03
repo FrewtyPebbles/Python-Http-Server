@@ -2,6 +2,10 @@
 
 Twig is a backend web framework for python utilizing the *socket* module to handle http requests and serve responses.
 
+## REST API example
+
+This example shows how to make a basic REST API with Twig that adds 2 numbers together.
+
 Example *main.py*:
 
 ```py
