@@ -6,18 +6,20 @@
 import os
 import threading
 import socket
+import webbrowser
+from typing import Dict
 
 from Twig.util import TermCol, utf8len
 
 class Server:
 
-    def __init__(self, root_directory, SERVER_HOST = '0.0.0.0', SERVER_PORT = 8000) -> None:
+    def __init__(self, root_directory, SERVER_HOST = '0.0.0.0', SERVER_PORT = 8000, verbose=False) -> None:
         # Define socket host and port
         self.SERVER_HOST = SERVER_HOST
         self.SERVER_PORT = SERVER_PORT
         self.root_directory = root_directory
         self.routes = {}
-        self.verbose = False
+        self.verbose = verbose
 
     def route(self, route:str):
         """Decorator that returns the page content."""
@@ -40,12 +42,20 @@ class Server:
         self.server_socket.bind((self.SERVER_HOST, self.SERVER_PORT))
         self.server_socket.listen(1)
         print(f'{TermCol.OKGREEN}STARTED{TermCol.ENDC} - http://localhost:{self.SERVER_PORT}/')
-
+        webbrowser.open(f"http://localhost:{self.SERVER_PORT}/")
         while True:    
             # Wait for client connections
             client_connection, client_address = self.server_socket.accept()
             # Handle client connection
             threading.Thread(target=lambda: self.client_handler(client_connection, client_address), daemon=True).start()
+
+    def parse_headers(self, raw_headers:str) -> Dict[str, str]:
+        headers = {}
+        for raw_header in raw_headers:
+            if ": " in raw_header:
+                h_parts = raw_header.split(": ", 1)
+                headers[h_parts[0]] = h_parts[1].strip()
+        return headers
 
     def client_handler(self, client_connection: socket, client_address):
         
@@ -57,14 +67,15 @@ class Server:
         main_req_params = headers[0].split()
         filename = main_req_params[1]
         filename = filename[1:]
+        request_headers = self.parse_headers(headers[1:])
         
         request_print = request if self.verbose else headers[0]
-        print(f'{TermCol.OKCYAN}REQUEST{TermCol.ENDC} - {TermCol.WARNING}{request_print}{TermCol.ENDC}')
+        print(f'   {TermCol.OKCYAN}REQUEST{TermCol.ENDC} - {TermCol.WARNING}{request_print}{TermCol.ENDC}\n     {TermCol.FAIL}FROM{TermCol.ENDC} {TermCol.OKGREEN}{client_address[0]}{TermCol.ENDC}')
         if self.verbose:
             print(f'{TermCol.OKBLUE}\tREQUESTING PATH{TermCol.ENDC} - {TermCol.UNDERLINE}"{filename}"{TermCol.ENDC}')
 
         try:
-            response = self.routes[filename]().generate()
+            response = self.routes[filename](request_headers).generate()
         except:
             errfile = open(os.path.join(os.path.dirname(__file__), 'pagenotfound.html'))
             ErrContent = errfile.read()
