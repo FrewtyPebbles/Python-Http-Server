@@ -7,7 +7,7 @@ import os
 import threading
 import socket
 
-from Twig.util import utf8len
+from Twig.util import TermCol, utf8len
 
 class Server:
 
@@ -17,13 +17,18 @@ class Server:
         self.SERVER_PORT = SERVER_PORT
         self.root_directory = root_directory
         self.routes = {}
+        self.verbose = False
 
-    def route(self, route):
+    def route(self, route:str):
         """Decorator that returns the page content."""
         def wrapper(func):
             self.routes[route] = func
             #print(self.routes)
         return wrapper
+
+    def set_route(self, route:str, func):
+        """Used to set routes from external file without decorator."""
+        self.routes[route] = func
 
     def run(self):
         self.server_runtime_handler()
@@ -34,7 +39,7 @@ class Server:
         self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.server_socket.bind((self.SERVER_HOST, self.SERVER_PORT))
         self.server_socket.listen(1)
-        print(f'Twig Server started on port {self.SERVER_PORT}')
+        print(f'{TermCol.OKGREEN}STARTED{TermCol.ENDC} - http://localhost:{self.SERVER_PORT}/')
 
         while True:    
             # Wait for client connections
@@ -53,46 +58,14 @@ class Server:
         filename = main_req_params[1]
         filename = filename[1:]
         
-        is_defined_route = filename in self.routes.keys()
-
-        if not is_defined_route:
-            if filename == '':
-                filename = 'index'
-            
-            if "." not in filename:
-                filename = f"{filename}.html"
-        
-        #print(f'REQUESTING PATH : "{filename}"')
-        print(' - INCOMING REQUEST\n"""' + request + '"""')
-        #Generate response headers
-        response_headers = "HTTP/1.1 200 OK\n"
+        request_print = request if self.verbose else headers[0]
+        print(f'{TermCol.OKCYAN}REQUEST{TermCol.ENDC} - {TermCol.WARNING}{request_print}{TermCol.ENDC}')
+        if self.verbose:
+            print(f'{TermCol.OKBLUE}\tREQUESTING PATH{TermCol.ENDC} - {TermCol.UNDERLINE}"{filename}"{TermCol.ENDC}')
 
         try:
-            if is_defined_route:
-                response = self.routes[filename]().generate()
-            else:
-                fin = open(self.root_directory + filename)
-                content = fin.read()
-                fin.close()
-
-                if main_req_params[0] == "POST":
-                    response_headers += f"Content-Length: {utf8len(content)}\n"
-                    if  filename.split(".")[1] == "html":
-                        response_headers += f"Content-Type: text/html\n"
-                    elif  filename.split(".")[1] == "json":
-                        response_headers += f"Content-Type: application/json\n"
-                    elif  filename.split(".")[1] == "css":
-                        response_headers += f"Content-Type: text/css\n"
-                elif main_req_params[0] == "GET":
-                    pass
-
-                response_headers += "\n"
-                # Send HTTP response
-                response = response_headers + content
-            #print('Response : """')
-            #print(response)
-            #print('"""')
-        except FileNotFoundError:
+            response = self.routes[filename]().generate()
+        except:
             errfile = open(os.path.join(os.path.dirname(__file__), 'pagenotfound.html'))
             ErrContent = errfile.read()
             errfile.close()
