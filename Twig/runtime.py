@@ -1,5 +1,5 @@
 """
- Implements a simple HTTP/1.0 Server
+ Twig socket server implementation
 
 """
 
@@ -7,22 +7,26 @@ import os
 import threading
 import socket
 import webbrowser
-from typing import Dict
+from typing import Callable, Dict
 
 from Twig.util import TermCol, utf8len
+import Twig.response as res
+
+VERSION = "0.2.0"
 
 class Server:
 
-    def __init__(self, root_directory, SERVER_HOST = '0.0.0.0', SERVER_PORT = 8000, verbose=False) -> None:
+    def __init__(self, root_directory, SERVER_HOST = '0.0.0.0', SERVER_PORT = 8000, verbose=False, open_root=True) -> None:
         # Define socket host and port
         self.SERVER_HOST = SERVER_HOST
         self.SERVER_PORT = SERVER_PORT
         self.root_directory = root_directory
-        self.routes = {}
+        self.routes:Dict[str, Callable[[Dict[str, str]], res.Response]] = {}
         self.verbose = verbose
+        self.open_root = open_root
 
     def route(self, route:str):
-        """Decorator that returns the page content."""
+        """Decorator that sets a route to the decorated function."""
         def wrapper(func):
             self.routes[route] = func
             #print(self.routes)
@@ -32,7 +36,12 @@ class Server:
         """Used to set routes from external file without decorator."""
         self.routes[route] = func
 
+    def set_all_routes(self, routes:Dict[str, Callable[[Dict[str, str]], res.Response]]):
+        """Used to set all routes from external file without decorator."""
+        self.routes = routes
+
     def run(self):
+        """Runs the server."""
         self.server_runtime_handler()
 
     def server_runtime_handler(self):
@@ -41,8 +50,11 @@ class Server:
         self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.server_socket.bind((self.SERVER_HOST, self.SERVER_PORT))
         self.server_socket.listen(1)
+        if self.verbose:
+            print(f"Twig Server Version: {VERSION}")
         print(f'{TermCol.OKGREEN}STARTED{TermCol.ENDC} - http://localhost:{self.SERVER_PORT}/')
-        webbrowser.open(f"http://localhost:{self.SERVER_PORT}/")
+        if self.open_root:
+            webbrowser.open(f"http://localhost:{self.SERVER_PORT}/")
         while True:    
             # Wait for client connections
             client_connection, client_address = self.server_socket.accept()
@@ -71,8 +83,7 @@ class Server:
         
         request_print = request if self.verbose else headers[0]
         print(f'   {TermCol.OKCYAN}REQUEST{TermCol.ENDC} - {TermCol.WARNING}{request_print}{TermCol.ENDC}\n     {TermCol.FAIL}FROM{TermCol.ENDC} {TermCol.OKGREEN}{client_address[0]}{TermCol.ENDC}')
-        if self.verbose:
-            print(f'{TermCol.OKBLUE}\tREQUESTING PATH{TermCol.ENDC} - {TermCol.UNDERLINE}"{filename}"{TermCol.ENDC}')
+        print(f'     {TermCol.FAIL}PATH{TermCol.ENDC} {TermCol.OKGREEN}"/{filename}"{TermCol.ENDC}')
 
         try:
             response = self.routes[filename](request_headers).generate()
@@ -83,6 +94,7 @@ class Server:
             response = f'HTTP/1.1 404 NOT FOUND\n\n{ErrContent}'
         
         client_connection.sendall(response.encode())
+        client_connection.close()
         #print("Request Handled.")
 
     def exit(self):

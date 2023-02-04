@@ -23,14 +23,10 @@ class Response:
     
     def generate(self) -> str:
         response_headers = "HTTP/1.1 200 OK\n"
-        response_headers += f"Content-Length: {utf8len(self.Content)}\n"
         response_headers += self.ContentType
+        response_headers += f"Content-Length: {utf8len(self.Content)}\n"
 
         return self.generate_headers() + response_headers + "\n" + self.Content
 
     def __repr__(self) -> str:
-        response_headers = "HTTP/1.1 200 OK\n"
-        response_headers += f"Content-Length: {utf8len(self.Content)}\n"
-        response_headers += self.ContentType
-        
-        return self.generate_headers() + response_headers + "\n" + self.Content
+        return self.generate()
