@@ -117,7 +117,7 @@ class Server:
             else:
                 response = self.routes[filename](request_headers).generate()
         except FileNotFoundError:
-            errfile = open(os.path.join(os.path.dirname(__file__), 'pagenotfound.html'))
+            errfile = open(os.path.join(os.path.dirname(__file__), '404.html'))
             ErrContent = errfile.read()
             errfile.close()
             response = f'HTTP/1.1 404 NOT FOUND\n\n{ErrContent}'
@@ -125,7 +125,7 @@ class Server:
         except KeyError:
             if self.debug:
                 print(f" ERROR - The requested page or file route \"{filename}\" does not exist/is not defined.\n\nExisting Static Paths:\n{self.static_resources}\n\nExisting Static Folders:\n{self.static_folders}\n\nIf this is a static resource for your site (such as .png, .css, etc.), please use the add_static member function to add it to the static files you wish to serve.  If you wish to add all resources within a folder as static resources, please use the add_static_folder function.")
-            errfile = open(os.path.join(os.path.dirname(__file__), 'pagenotfound.html'))
+            errfile = open(os.path.join(os.path.dirname(__file__), '404.html'))
             ErrContent = errfile.read()
             errfile.close()
             response = f'HTTP/1.1 404 NOT FOUND\n\n{ErrContent}'.encode()
