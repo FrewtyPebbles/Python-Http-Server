@@ -1,5 +1,8 @@
+import codecs
+
+
 def utf8len(s:str):
-    return len(s.encode('utf-8'))
+    return len(s)
 
 class TermCol:
     HEADER = '\033[95m'

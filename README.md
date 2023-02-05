@@ -1,8 +1,18 @@
-# Twig 0.2.0
+# Twig 0.3.0
 
 Twig is a backend web framework for python utilizing the **socket** module to handle http requests and serve responses.
 
 ### Changelog
+
+---
+
+**0.3.0**
+
+ - Added static paths and folders functions.
+
+ - Added element class.
+
+ - Added React like component classes.
 
 ---
 
@@ -18,32 +28,96 @@ Twig is a backend web framework for python utilizing the **socket** module to ha
 
 ### REST API example
 
-This example shows how to make a basic REST API with Twig that adds 2 numbers together.  It includes all the current functionalities of Twig.
+This example shows how to make a basic REST API with Twig that adds 2 numbers together, and an example use case for the component system.  It includes all the current functionalities of Twig.
 
 Example *main.py*:
 
 ```py
 import random
+import time
 from typing import Dict
 from Twig import Server, ContentType, Response as res
+from componenttest import Card, Dashboard
 
 # SERVER CONSTRUCTOR EXAMPLE
 
-app = Server("", verbose=False, open_root=False)
+app = Server("", verbose=False, open_root=False, debug=True)
 
 # ---PARAMETERS--- #
 #
-# verbose will show the full request each time when True
+# verbose will show the full request each time when True.
 #
-# open_root will open the index of the site in a web browser every time the server runs.
+# open_root will open the index of the site in a web browser every time the server runs when True.
+#
+# debug will show any request errors when True.
 #
 # ---------------- #
+
+# ADD STATIC FILE EXAMPLE
+
+app.add_static("test.jpg")
+
+# SET STATIC FILES (this overwrites any static files you've added before)
+
+app.set_static({"test.jpg"})
+
+# ADD STATIC FOLDER EXAMPLE
+
+app.add_static_folder("test")
+
+# SET STATIC FOLDERS (this overwrites any static folders you've added before)
+
+app.set_static_folders({"test"})
+
+# ---ABOUT--- #
+#
+# Static files are files that can be accessed by clients without declaring a route
+#function.  Any file that is within a static folder is also treated as a static file.
+#
+# ----------- #
+
+
+# COMPONENT EXAMPLE (See component.py example)
+def card(headers: Dict[str, str]):
+    return res.Response(f'''<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home</title>
+</head>
+<body>
+{Dashboard(cardlist = [
+    {
+        "name": "William",
+        "date": time.strftime("%H:%M:%S", time.localtime()),
+        "title": "Component test",
+        "content": f"""This is a test of the component system.{
+            Card(
+                name = "Also William",
+                date = time.strftime("%H:%M:%S", time.localtime()),
+                title = "Nested Component",
+                content = "This is a test of nested components."
+            )
+        }"""
+    },
+    {
+        "name": "Jeff",
+        "date": time.strftime("%H:%M:%S", time.localtime()),
+        "title": "Jeff's First Post",
+        "content": "Hi my name is Jeff and this is my first post!"
+    }
+])}
+</body>
+</html>
+''', ContentType.html)
 
 
 # SET ALL ROUTES EXAMPLE
 
 app.set_all_routes({
-    "about": lambda headers: res.Response("Im joe and this is my website.", ContentType.plain)
+    "card": card
 })
 
 # ---ABOUT--- #
@@ -70,7 +144,7 @@ def test_json(headers: Dict[str, str]):
 # plaintext example
 @app.route("apiexample/plain")
 def test_plain(headers: Dict[str, str]):
-    return res.Response("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras erat dui, finibus vel lectus ac, pharetra dictum odio. Etiam risus sapien, auctor eu volutpat sit amet, porta in nunc. Quisque vitae varius ex, eu volutpat orci. Cras vel elit sed mi placerat pharetra eget vel odio. Cras vel elit sed mi placerat pharetra eget vel odio. Proin ipsum purus, laoreet quis dictum a, laoreet sed ligula. Cras erat dui, finibus vel lectus ac, pharetra dictum odio. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Quisque vitae varius ex, eu volutpat orci. Quisque vitae varius ex, eu volutpat orci. Duis ac nulla varius diam ultrices rutrum. Nullam tempus scelerisque purus, sed mattis elit condimentum nec. Cras erat dui, finibus vel lectus ac, pharetra dictum odio. Etiam risus sapien, auctor eu volutpat sit amet, porta in nunc. Quisque vitae varius ex, eu volutpat orci. Integer ultricies malesuada quam. Etiam risus sapien, auctor eu volutpat sit amet, porta in nunc.", ContentType.plain)
+    return res.Response("Lorem ipsum dolor sit amet, consectetur adipiscing elit.", ContentType.plain)
 
 # css example
 @app.route("apiexample/css")
@@ -143,7 +217,50 @@ Example *index.html*:
             const res_json = await res.json()
             CONTENT_DIV.innerText = res_json.result
         }
+        async_solve()
     </script>
 </body>
 </html>
+```
+
+Example *component.py*:
+
+```py
+from Twig.frontend import Component, Element as E
+
+
+class Card(Component):
+    """Components are classes that inherit from the Component class."""
+    def hydrate(self):
+        name = self.props["name"]
+        date = self.props["date"]
+        title = self.props["title"]
+        content = self.props["content"]
+        
+        return E("div", {
+            "style": "background-color: gray; margin: 5px; border: solid; border-radius: 10px;",
+            "id":f"{name}"
+        }, [
+            E("div", {"style": "display: flex; justify-content: space-between;"}, [
+                E("div", {"style": "font-size: 20px; padding: 5px;"}, [f"{name}"]),
+                E("div", {"style": "font-size: 15px; padding: 5px;"}, [f"{date}"]),
+            ]),
+            E("h3", {"style": "text-align: center;"}, [f"{title}"]),
+            E("div", {"style": "padding: 10px; font-style: italic;"}, [f"{content}"]),
+        ]).render()
+
+class Dashboard(Component):
+    """The Dashboard component takes in a list of dictionaries with all of the cards data
+    and constructs cards with that data inside of the Dashboard component.  Comprehension
+    can be used to create a workflow similar to React.js."""
+    def hydrate(self):
+        return E("div", {"style": "background-color: black; color: white; padding: 10px;"}, [
+            E("h1", {}, ["DASHBOARD"]),
+            E("div", {}, [f"""{Card(
+                name = card["name"],
+                date = card["date"],
+                title = card["title"],
+                content = card["content"]
+            )}""" for ind, card in enumerate(self.props["cardlist"])])
+        ]).render()
 ```
