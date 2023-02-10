@@ -1,7 +1,7 @@
 import codecs
 from typing import Dict
-from Twig.types import ContentType
-from Twig.util import utf8len
+from .types import ContentType
+from .util import utf8len
 
 def read(path:str):
     fl = open(path)

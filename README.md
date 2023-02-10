@@ -1,8 +1,21 @@
-# Twig 0.3.0
+# Twig 0.4.6
 
 Twig is a backend web framework for python utilizing the **socket** module to handle http requests and serve responses.
 
+To install use the following command:
+```cli
+py -m pip install TwigWeb
+```
+
 ### Changelog
+
+---
+
+**0.4.0**
+
+ - Added dynamic route parameters.
+
+ - Improved route handling with Route class
 
 ---
 
@@ -12,7 +25,7 @@ Twig is a backend web framework for python utilizing the **socket** module to ha
 
  - Added element class.
 
- - Added React like component classes.
+ - Added component classes.
 
 ---
 
@@ -36,7 +49,7 @@ Example *main.py*:
 import random
 import time
 from typing import Dict
-from Twig import Server, ContentType, Response as res
+from TwigWeb.backend import Server, ContentType, Response as res
 from componenttest import Card, Dashboard
 
 # SERVER CONSTRUCTOR EXAMPLE
@@ -167,6 +180,10 @@ def test_headers(headers: Dict[str, str]):
 def index(headers: Dict[str, str]):
     return res.Response(res.read("index.html"))
 
+# dynamic route example
+@app.route("dynamic/(string_var_name)/[int_var_name]")
+def dynamic_example(headers: Dict[str, str], route_parameters:Dict[str, str | int]):
+    return res.Response(f"""string:{route_parameters["string_var_name"]} int:{route_parameters["int_var_name"]}""")
 
 # MANUALLY SET ROUTE EXAMPLE
 
@@ -226,7 +243,7 @@ Example *index.html*:
 Example *component.py*:
 
 ```py
-from Twig.frontend import Component, Element as E
+from TwigWeb.frontend import Component, Element as E
 
 
 class Card(Component):

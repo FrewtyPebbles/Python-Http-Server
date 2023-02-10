@@ -8,13 +8,15 @@ from pathlib import Path
 import threading
 import socket
 import webbrowser
-from typing import Callable, Dict, Set
-from Twig.types import ContentType, ext_content_type
+from typing import Callable, Dict, Set, Union
 
-from Twig.util import TermCol, utf8len
-import Twig.response as res
+from .routehandler.route import Route
+from .types import ContentType, ext_content_type
 
-VERSION = "0.3.0"
+from .util import TermCol, utf8len
+from . import response as res
+
+VERSION = "0.4.6"
 
 class Server:
 
@@ -23,12 +25,14 @@ class Server:
         self.SERVER_HOST = SERVER_HOST
         self.SERVER_PORT = SERVER_PORT
         self.root_directory = root_directory
-        self.routes:Dict[str, Callable[[Dict[str, str]], res.Response]] = {}
+        self.routes:Dict[Route, Union[Callable[[Dict[str, str], Dict[str, Union[int, str]]], res.Response], Callable[[Dict[str, str]], res.Response]]] = {}
         self.verbose = verbose
         self.open_root = open_root
         self.debug = debug
         self.static_resources:Set[str] = set()
         self.static_folders:Set[Path] = set()
+
+    from .routehandler.router import _handle_route
 
     def set_static(self, static_resources:Set[str]):
         self.static_resources = static_resources
@@ -45,17 +49,19 @@ class Server:
     def route(self, route:str):
         """Decorator that sets a route to the decorated function."""
         def wrapper(func):
-            self.routes[route] = func
+            self.routes[Route(route)] = func
             #print(self.routes)
         return wrapper
 
     def set_route(self, route:str, func):
         """Used to set routes from external file without decorator."""
-        self.routes[route] = func
+        self.routes[Route(route)] = func
 
-    def set_all_routes(self, routes:Dict[str, Callable[[Dict[str, str]], res.Response]]):
+    def set_all_routes(self, routes:Dict[str, Union[Callable[[Dict[str, str], Dict[str, Union[int, str]]], res.Response], Callable[[Dict[str, str]], res.Response]]]):
         """Used to set all routes from external file without decorator."""
-        self.routes = routes
+        for key, val in routes.items():
+            self.routes[Route(key)] = val
+        
 
     def run(self):
         """Runs the server."""
@@ -94,28 +100,28 @@ class Server:
             # Parse HTTP headers
             headers = request.split('\n')
             main_req_params = headers[0].split()
-            filename = main_req_params[1]
-            filename = filename[1:]
+            reqpath = main_req_params[1]
+            reqpath = reqpath[1:]
             request_headers = self.parse_headers(headers[1:])
             
             request_print = request if self.verbose else headers[0]
             print(f'   {TermCol.OKCYAN}REQUEST{TermCol.ENDC} - {TermCol.WARNING}{request_print}{TermCol.ENDC}\n     {TermCol.FAIL}FROM{TermCol.ENDC} {TermCol.OKGREEN}{client_address[0]}{TermCol.ENDC}')
-            print(f'     {TermCol.FAIL}PATH{TermCol.ENDC} {TermCol.OKGREEN}"/{filename}"{TermCol.ENDC}')
+            print(f'     {TermCol.FAIL}PATH{TermCol.ENDC} {TermCol.OKGREEN}"/{reqpath}"{TermCol.ENDC}')
             
             response = ""
 
-            if filename in self.static_resources or all(
-                os.path.abspath(filename).startswith(os.path.abspath(s_p)+os.sep) 
+            if reqpath in self.static_resources or all(
+                os.path.abspath(reqpath).startswith(os.path.abspath(s_p)+os.sep) 
                 for s_p in self.static_folders
             ):
-                fl = open(filename, "rb")
+                fl = open(reqpath, "rb")
                 flContent = fl.read()
                 fl.close()
-                extension:str = filename.split(".")[1]
+                extension:str = reqpath.split(".")[1]
 
                 response = res.Response(flContent, ext_content_type(extension)).generate()
             else:
-                response = self.routes[filename](request_headers).generate()
+                response = self._handle_route(reqpath, request_headers)
         except FileNotFoundError:
             errfile = open(os.path.join(os.path.dirname(__file__), '404.html'))
             ErrContent = errfile.read()
@@ -124,7 +130,7 @@ class Server:
         
         except KeyError:
             if self.debug:
-                print(f" ERROR - The requested page or file route \"{filename}\" does not exist/is not defined.\n\nExisting Static Paths:\n{self.static_resources}\n\nExisting Static Folders:\n{self.static_folders}\n\nIf this is a static resource for your site (such as .png, .css, etc.), please use the add_static member function to add it to the static files you wish to serve.  If you wish to add all resources within a folder as static resources, please use the add_static_folder function.")
+                print(f" ERROR - The requested page or file route \"{reqpath}\" does not exist/is not defined.\n\nExisting Static Paths:\n{self.static_resources}\n\nExisting Static Folders:\n{self.static_folders}\n\nIf this is a static resource for your site (such as .png, .css, etc.), please use the add_static member function to add it to the static files you wish to serve.  If you wish to add all resources within a folder as static resources, please use the add_static_folder function.")
             errfile = open(os.path.join(os.path.dirname(__file__), '404.html'))
             ErrContent = errfile.read()
             errfile.close()
