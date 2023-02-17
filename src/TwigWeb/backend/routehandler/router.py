@@ -25,7 +25,7 @@ def _handle_route(self:Server, reqpath:str, request_headers):
                 route_parameters[param.name] = int(path[pn])
             elif param.type == RouteParamType.string:
                 route_parameters[param.name] = path[pn]
-    print(route_key)
+    
     if route_parameters == {}:
         return self.routes[route_key](request_headers).generate()
     else:

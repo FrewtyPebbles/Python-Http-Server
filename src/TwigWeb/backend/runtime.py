@@ -16,7 +16,7 @@ from .types import ContentType, ext_content_type
 from .util import TermCol, utf8len
 from . import response as res
 
-VERSION = "0.4.11"
+VERSION = "0.4.12"
 
 class Server:
 
@@ -128,7 +128,6 @@ class Server:
 
                 response = res.Response(flContent, ext_content_type(extension)).generate()
             else:
-                print("route")
                 response = self._handle_route(reqpath, request_headers)
         except FileNotFoundError as e:
             if self.debug:

@@ -1,4 +1,4 @@
-# Twig 0.4.11
+# Twig 0.4.12
 
 Twig is a backend web framework for python utilizing the **socket** module to handle http requests and serve responses.
 
