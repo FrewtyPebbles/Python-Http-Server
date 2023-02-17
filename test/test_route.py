@@ -4,7 +4,7 @@ from src.TwigWeb.backend.routehandler.route import Route, RouteParameter, RouteP
 from src.TwigWeb.backend import Server
 from src.TwigWeb.backend.response import Response
 
-class Testing(unittest.TestCase):
+class Router(unittest.TestCase):
 
     def test_route_eq(self):
         rp1 = RouteParameter()

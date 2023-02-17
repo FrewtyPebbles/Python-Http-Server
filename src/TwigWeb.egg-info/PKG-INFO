@@ -1,3 +1,18 @@
+Metadata-Version: 2.1
+Name: TwigWeb
+Version: 0.4.11
+Summary: Twig is a frontend and backend web framework utilizing the python socket module to serve http requests.
+Home-page: https://github.com/FrewtyPebbles/Twig-Web-Framework
+Author: William Lim
+Author-email: William.Lim@csu.fullerton.edu
+Project-URL: Bug Tracker, https://github.com/FrewtyPebbles/Twig-Web-Framework/issues
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+License-File: LICENSE.txt
+
 # Twig 0.4.11
 
 Twig is a backend web framework for python utilizing the **socket** module to handle http requests and serve responses.

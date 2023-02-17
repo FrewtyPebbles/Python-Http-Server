@@ -16,11 +16,18 @@ from .types import ContentType, ext_content_type
 from .util import TermCol, utf8len
 from . import response as res
 
-VERSION = "0.4.6"
+VERSION = "0.4.11"
 
 class Server:
 
-    def __init__(self, root_directory, SERVER_HOST = '0.0.0.0', SERVER_PORT = 8000, verbose=False, open_root=True, debug=False) -> None:
+    def __init__(self, root_directory,
+                    SERVER_HOST = '0.0.0.0',
+                    SERVER_PORT = 8000,
+                    verbose=False,
+                    open_root=True,
+                    debug=False,
+                    error_page_path = ""
+                ) -> None:
         # Define socket host and port
         self.SERVER_HOST = SERVER_HOST
         self.SERVER_PORT = SERVER_PORT
@@ -31,6 +38,7 @@ class Server:
         self.debug = debug
         self.static_resources:Set[str] = set()
         self.static_folders:Set[Path] = set()
+        self.error_page_path = error_page_path
 
     from .routehandler.router import _handle_route
 
@@ -109,11 +117,10 @@ class Server:
             print(f'     {TermCol.FAIL}PATH{TermCol.ENDC} {TermCol.OKGREEN}"/{reqpath}"{TermCol.ENDC}')
             
             response = ""
-
             if reqpath in self.static_resources or all(
                 os.path.abspath(reqpath).startswith(os.path.abspath(s_p)+os.sep) 
                 for s_p in self.static_folders
-            ):
+                ) if len(self.static_folders) != 0 else False:
                 fl = open(reqpath, "rb")
                 flContent = fl.read()
                 fl.close()
@@ -121,17 +128,29 @@ class Server:
 
                 response = res.Response(flContent, ext_content_type(extension)).generate()
             else:
+                print("route")
                 response = self._handle_route(reqpath, request_headers)
-        except FileNotFoundError:
-            errfile = open(os.path.join(os.path.dirname(__file__), '404.html'))
+        except FileNotFoundError as e:
+            if self.debug:
+                print(e)
+            errfile = ""
+            if self.error_page_path != "":
+                errfile = open(self.error_page_path)
+            else:
+                errfile = open(os.path.join(os.path.dirname(__file__), '404.html'))
             ErrContent = errfile.read()
             errfile.close()
-            response = f'HTTP/1.1 404 NOT FOUND\n\n{ErrContent}'
+            response = f'HTTP/1.1 404 NOT FOUND\n\n{ErrContent}'.encode()
         
-        except KeyError:
+        except KeyError as e:
             if self.debug:
                 print(f" ERROR - The requested page or file route \"{reqpath}\" does not exist/is not defined.\n\nExisting Static Paths:\n{self.static_resources}\n\nExisting Static Folders:\n{self.static_folders}\n\nIf this is a static resource for your site (such as .png, .css, etc.), please use the add_static member function to add it to the static files you wish to serve.  If you wish to add all resources within a folder as static resources, please use the add_static_folder function.")
-            errfile = open(os.path.join(os.path.dirname(__file__), '404.html'))
+                print(e)
+            errfile = ""
+            if self.error_page_path != "":
+                errfile = open(self.error_page_path)
+            else:
+                errfile = open(os.path.join(os.path.dirname(__file__), '404.html'))
             ErrContent = errfile.read()
             errfile.close()
             response = f'HTTP/1.1 404 NOT FOUND\n\n{ErrContent}'.encode()
