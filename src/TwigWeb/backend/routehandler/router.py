@@ -12,11 +12,17 @@ else:
 def _handle_route(self:Server, reqpath:str, request_headers):
     path = tuple(int(ind) if ind.isdigit() else ind for ind in reqpath.split("?")[0].split("/"))
     route_key = Route("")
+    fail = True
     for key in self.routes.keys():
         if key.parameters == path:
             #this is the correct route
             route_key = key
+            fail = False
             break
+    
+    if fail:
+        return self.error_404(reqpath)
+
 
     route_parameters = {}
     for pn, param in enumerate(route_key.parameters):

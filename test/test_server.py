@@ -9,5 +9,9 @@ class ServerTest(unittest.TestCase):
         @app.route("")
         def index(headers):
             return Response("test", ContentType.html)
+
+        @app.route("page/(num)")
+        def index(headers, params):
+            return Response(f"num: {params['num']}", ContentType.html)
         
         app.run()

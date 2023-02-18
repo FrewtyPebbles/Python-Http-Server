@@ -16,7 +16,7 @@ from .types import ContentType, ext_content_type
 from .util import TermCol, utf8len
 from . import response as res
 
-VERSION = "0.4.12"
+VERSION = "0.4.16"
 
 class Server:
 
@@ -104,12 +104,13 @@ class Server:
         
         # Get the client request
         request = client_connection.recv(1024).decode()
+        # Parse HTTP headers
+        headers = request.split('\n')
+        main_req_params = headers[0].split()
+        reqpath = main_req_params[1]
+        reqpath = reqpath[1:]
         try:
-            # Parse HTTP headers
-            headers = request.split('\n')
-            main_req_params = headers[0].split()
-            reqpath = main_req_params[1]
-            reqpath = reqpath[1:]
+            
             request_headers = self.parse_headers(headers[1:])
             
             request_print = request if self.verbose else headers[0]
@@ -117,10 +118,10 @@ class Server:
             print(f'     {TermCol.FAIL}PATH{TermCol.ENDC} {TermCol.OKGREEN}"/{reqpath}"{TermCol.ENDC}')
             
             response = ""
-            if reqpath in self.static_resources or all(
+            if reqpath in self.static_resources or (all(
                 os.path.abspath(reqpath).startswith(os.path.abspath(s_p)+os.sep) 
                 for s_p in self.static_folders
-                ) if len(self.static_folders) != 0 else False:
+                ) if len(self.static_folders) != 0 else False):
                 fl = open(reqpath, "rb")
                 flContent = fl.read()
                 fl.close()
@@ -129,36 +130,25 @@ class Server:
                 response = res.Response(flContent, ext_content_type(extension)).generate()
             else:
                 response = self._handle_route(reqpath, request_headers)
-        except FileNotFoundError as e:
-            if self.debug:
-                print(e)
-            errfile = ""
-            if self.error_page_path != "":
-                errfile = open(self.error_page_path)
-            else:
-                errfile = open(os.path.join(os.path.dirname(__file__), '404.html'))
-            ErrContent = errfile.read()
-            errfile.close()
-            response = f'HTTP/1.1 404 NOT FOUND\n\n{ErrContent}'.encode()
-        
-        except KeyError as e:
-            if self.debug:
-                print(f" ERROR - The requested page or file route \"{reqpath}\" does not exist/is not defined.\n\nExisting Static Paths:\n{self.static_resources}\n\nExisting Static Folders:\n{self.static_folders}\n\nIf this is a static resource for your site (such as .png, .css, etc.), please use the add_static member function to add it to the static files you wish to serve.  If you wish to add all resources within a folder as static resources, please use the add_static_folder function.")
-                print(e)
-            errfile = ""
-            if self.error_page_path != "":
-                errfile = open(self.error_page_path)
-            else:
-                errfile = open(os.path.join(os.path.dirname(__file__), '404.html'))
-            ErrContent = errfile.read()
-            errfile.close()
-            response = f'HTTP/1.1 404 NOT FOUND\n\n{ErrContent}'.encode()
+        except:
+            response = self.error_404(reqpath)
         
         client_connection.sendall(response)
         
         #finish the request
         client_connection.close()
 
+    def error_404(self, reqpath):
+        if self.debug:
+            print(f" ERROR - The requested page or file route \"{reqpath}\" does not exist/is not defined.\n\nExisting Static Paths:\n{self.static_resources}\n\nExisting Static Folders:\n{self.static_folders}\n\nIf this is a static resource for your site (such as .png, .css, etc.), please use the add_static member function to add it to the static files you wish to serve.  If you wish to add all resources within a folder as static resources, please use the add_static_folder function.")
+        errfile = ""
+        if self.error_page_path != "":
+            errfile = open(self.error_page_path)
+        else:
+            errfile = open(os.path.join(os.path.dirname(__file__), '404.html'))
+        ErrContent = errfile.read()
+        errfile.close()
+        return f'HTTP/1.1 404 NOT FOUND\n\n{ErrContent}'.encode()
     def exit(self):
         # Close socket
         self.server_socket.close()

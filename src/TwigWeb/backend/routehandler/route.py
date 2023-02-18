@@ -44,9 +44,12 @@ class Route:
         return self.parameters == other
 
     def __hash__(self) -> int:
-        return hash(self.parameters)
+        return hash((self.raw, ) + self.parameters + self.dynamic_parameters)
 
     def _handle_parameters(self):
+        if self.raw == "":
+            self.parameters = ("",)
+            return
         current_scope = RouteParamType.null
         current_parameter = RouteParameter()
         param_str_buffer = ""
@@ -83,3 +86,4 @@ class Route:
                 param_str_buffer += chr
         if param_str_buffer != "":
             self.parameters = self.parameters + (param_str_buffer,)
+        
