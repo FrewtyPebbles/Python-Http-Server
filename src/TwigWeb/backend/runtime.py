@@ -8,7 +8,10 @@ from pathlib import Path
 import threading
 import socket
 import webbrowser
-from typing import Callable, Dict, Set, Union
+from urllib.parse import parse_qs
+from typing import Callable, Dict, List, Set, Union
+
+from .headers import Headers
 
 from .routehandler.route import Route
 from .types import ContentType, ext_content_type
@@ -16,7 +19,7 @@ from .types import ContentType, ext_content_type
 from .util import TermCol, utf8len
 from . import response as res
 
-VERSION = "0.4.16"
+VERSION = "0.5.0"
 
 class Server:
 
@@ -92,26 +95,32 @@ class Server:
             # Handle client connection
             threading.Thread(target=lambda: self.client_handler(client_connection, client_address), daemon=True).start()
 
-    def parse_headers(self, raw_headers:str) -> Dict[str, str]:
+    def parse_headers(self, raw_headers:str, parsedurl:Dict[str, List[str]]) -> Dict[str, str]:
         headers = {}
         for raw_header in raw_headers:
             if ": " in raw_header:
                 h_parts = raw_header.split(": ", 1)
                 headers[h_parts[0]] = h_parts[1].strip()
-        return headers
+
+        return Headers(parsedurl, headers)
 
     def client_handler(self, client_connection: socket, client_address):
         
         # Get the client request
-        request = client_connection.recv(1024).decode()
+        request:str = client_connection.recv(1024).decode()
         # Parse HTTP headers
-        headers = request.split('\n')
+        headers:List[str] = request.split('\n')
         main_req_params = headers[0].split()
         reqpath = main_req_params[1]
+        if "?" in reqpath:
+            parsedurl = parse_qs(reqpath.split("?")[1])
+        else:
+            parsedurl = {}
         reqpath = reqpath[1:]
+
         try:
             
-            request_headers = self.parse_headers(headers[1:])
+            request_headers = self.parse_headers(headers[1:], parsedurl)
             
             request_print = request if self.verbose else headers[0]
             print(f'   {TermCol.OKCYAN}REQUEST{TermCol.ENDC} - {TermCol.WARNING}{request_print}{TermCol.ENDC}\n     {TermCol.FAIL}FROM{TermCol.ENDC} {TermCol.OKGREEN}{client_address[0]}{TermCol.ENDC}')
