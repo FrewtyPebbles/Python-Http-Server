@@ -61,12 +61,12 @@ from src.TwigWeb.backend.response import Response
 app = Server("", debug=True, open_root=False)
 
 @app.route("")
-def index(headers:Headers):
+def index(headers):
     #this is the index of the app
     return Response("test", ContentType.html)
 
 @app.route("form")
-def form(headers:Headers):
+def form(headers):
     #this form redirects to page/2
     return Response("""<form action="/page/2">
 <label for="fname">First name:</label><br>
@@ -77,13 +77,13 @@ def form(headers:Headers):
 </form>""")
 
 @app.route("page/[num]")
-def index(headers:Headers, num):
+def index(headers, num):
     # Headers.URL is a dictionary containing all url query parameters/variables.
     # num a dynamic route.
     return Response(f"num: {num} and {headers.URL}", ContentType.html)
 
 @app.route("page")
-def index(headers:Headers):
+def index(headers):
     return Response(f"page", ContentType.html)
 
 app.run()
